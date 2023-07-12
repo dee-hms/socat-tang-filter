@@ -17,70 +17,88 @@
 DIR=/var/db/tang
 TOTAL_LINES=
 TANGD_PORT=81
-LOGFILE="/tmp/$(basename "$0" | sed s/\.sh//g)"
+DEFAULT_LOGFILE="/tmp/$(basename "$0" | sed s/\.sh//g)"
 CURRENT_HTTP_REQ="GET"
+DEFAULT_CONFFILE="/etc/socat-tang-filter.csv"
 
 function usage() {
-  echo "$1 [-l logfile]"
-  exit "$2"
+    echo "$1 [-c csv_file (default:${DEFAULT_CONFFILE})] [-l logfile:(default:${DEFAULT_LOGFILE})]"
+    echo
+    exit "$2"
 }
 
-while getopts "l:h" arg
+function msg_usage() {
+    echo
+    echo "$3"
+    echo
+    usage "$1" "$2"
+}
+
+function dump_log_header() {
+    {
+        echo "***************************************"
+        echo "PID:$$"
+        echo "TANG PID:$(pgrep tangd)"
+        echo "CONFFILE:${CONFFILE}"
+        echo "LOGFILE:${LOGFILE}"
+        echo "***************************************"
+    }  >> "${LOGFILE}"
+}
+
+while getopts "l:c:h" arg
 do
-  case "${arg}" in
-    l) LOGFILE=${OPTARG}
-       echo "CONTEXT=${CONTEXT}"
-       ;;
-    h) usage "$0" 0
-       ;;
-    *) usage "$0" 1
-       ;;
-  esac
+    case "${arg}" in
+        l) LOGFILE=${OPTARG}
+           ;;
+        c) CONFFILE=${OPTARG}
+           ;;
+        h) usage "$0" 0
+           ;;
+        *) usage "$0" 1
+           ;;
+    esac
 done
 
-{
-    echo "***************************************" 
-    echo "PID:$$" >> "${LOGFILE}"
-    echo "TANG PID:$(pgrep tangd)" >> "${LOGFILE}"
-    echo "***************************************"
-}  >> "${LOGFILE}"
+test -z "${LOGFILE}"  && LOGFILE="${DEFAULT_LOGFILE}"
+test -z "${CONFFILE}" && CONFFILE="${DEFAULT_CONFFILE}"
+test -f "${CONFFILE}" || msg_usage "$0" 1 "csv configuration file:${CONFFILE} does not exist"
+
+dump_log_header
 
 while read -r line;
 do
-    echo "init line:${line}" >> "${LOGFILE}"
-    echo "CONTENT_LENGTH=${CONTENT_LENGTH}" >> "${LOGFILE}"
+    echo "[${#line}] line:$(echo "${line}" | tr -d '\n' | tr -d '\r')" >> "${LOGFILE}"
     line_length=$((${#line}+1)) # It considers new line
-    echo "line_length=${line_length}" >> "${LOGFILE}"    
-    if echo "${line}" | grep "POST /rec" > /dev/null;
+    if echo "${line}" | grep "POST /" > /dev/null;
     then
         CURRENT_HTTP_REQ="POST"
     fi
 
-    ################ THIS PART SHOULD BE DONE PROGRAMATICALLY WITH A CONFIGURATION FILE ######################
-    ################ CONFIGURATION SHOULD HAVE SOMETHING LIKE:
-    ################ "w1":"/var/db/tang1"
-    ################ "w2":"/var/db/tang2"
-    if echo "${line}" | grep -E "GET /adv/w1[\/]{0,1}" > /dev/null; then
-        line=${line/"/w1"/}
-        DIR=/var/db/tang1
-    elif echo "${line}" | grep -E "GET /adv/w2[\/]{0,1}" > /dev/null; then
-        line=${line/"/w2"/}
-        DIR=/var/db/tang2
-    elif echo "${line}" | grep -E "POST /rec/w1/[a-z,A-Z,0-9,]{1,}" > /dev/null; then
-        line=${line/"/w1"/}
-        DIR=/var/db/tang1
-    elif echo "${line}" | grep -E "POST /rec/w2/[a-z,A-Z,0-9,]{1,}" > /dev/null; then
-        line=${line/"/w2"/}
-        DIR=/var/db/tang2
+    if [ "${CURRENT_HTTP_REQ}" = "GET" ]; then
+        workspace=$(echo "${line}" | awk -F "GET " '{print $2}' | awk -F "/adv" '{print $1}' | tr -d '/')
+    elif [ "${CURRENT_HTTP_REQ}" = "POST" ]; then
+        workspace=$(echo "${line}" | awk -F "POST " '{print $2}' | awk -F "/rec" '{print $1}' | tr -d '/')
     fi
-    ############### /THIS PART SHOULD BE DONE PROGRAMATICALLY WITH A CONFIGURATION FILE ######################
-    
+
+    echo "workspace=${workspace}" >> "${LOGFILE}"
+
+    if [ -n "${workspace}" ]; then
+        if workspace_dir=$(grep "${workspace}", "${CONFFILE}"); then
+            DIR=$(echo "${workspace_dir}" | awk -F ',' '{print $2}' | tr -d '"')
+            line=${line/"/${workspace}"/}
+            {
+                echo "workspace_dir:${workspace_dir} from configuration file:[$CONFFILE]"
+                echo "parsed DIR=${DIR} for workspace:${workspace} from configuration file:[$CONFFILE]"
+                echo "forward line=${line}"
+            } >> "${LOGFILE}"
+        fi
+    fi
+
     if echo "${line}" | grep -E "Content-Length:" > /dev/null; then
         CONTENT_LENGTH=$(echo "${line}" | awk -F ":" '{print $2}' | sed 's/ //g' | tr -d '\r')
-        echo "PARSED CONTENT_LENGTH=${CONTENT_LENGTH}" >> "${LOGFILE}"
+        echo "parsed CONTENT_LENGTH=${CONTENT_LENGTH}" >> "${LOGFILE}"
     fi
     TOTAL_LINES=$(printf "%s\n%s" "${TOTAL_LINES}" "${line}")
-    echo "[${#line}] line:$(echo "${line}" | tr -d '\n' | tr -d '\r')" >> "${LOGFILE}"
     if [ -n "${CONTENT_LENGTH}" ]; then
         echo "[HEXDUMP] line_length:$(echo "${line_length}" | hexdump)" >> "${LOGFILE}"
         echo "[HEXDUMP] CONTENT_LENGTH:$(echo "${CONTENT_LENGTH}" | hexdump)" >> "${LOGFILE}"
