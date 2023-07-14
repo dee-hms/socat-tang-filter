@@ -9,7 +9,13 @@ $ sudo socat -v tcp-l:80,reuseaddr,fork exec:"$(pwd)/socat-tang-filter.sh"
 
 By default, this script will use `/etc/socat-tang-filter.csv` CSV configuration file to identify which Tang directory will be used according to the `workspace` (URL prefix) used.
 
-An example of a possible CSV file could be this:
+In case it is required to use the script with a different CSV file, it can be done through `-c` option. In next example, `/usr/local/etc/socat-tang-filter.csv` is used:
+
+```bash
+$ sudo socat -v tcp-l:80,reuseaddr,fork exec:"$(pwd)/socat-tang-filter.sh -c /usr/local/etc/socat-tang-filter.csv"
+```
+
+Regarding the CSV configuration file, an example of a possible CSV file could be this:
 
 ```bash
 $ sudo cat /etc/socat-tang-filter.csv
