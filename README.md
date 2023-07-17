@@ -15,6 +15,11 @@ In case it is required to use the script with a different CSV file, it can be do
 $ sudo socat -v tcp-l:80,reuseaddr,fork exec:"$(pwd)/socat-tang-filter.sh -c /usr/local/etc/socat-tang-filter.csv"
 ```
 
+Default log file is `/tmp/socat-tang-filter`. Script can also use a different log file by using -l option:
+```bash
+$ sudo socat -v tcp-l:80,reuseaddr,fork exec:"$(pwd)/socat-tang-filter.sh -c /usr/local/etc/socat-tang-filter.csv -l /var/log/socat-tang-filter.log"
+```
+
 Regarding the CSV configuration file, an example of a possible CSV file could be this:
 
 ```bash
