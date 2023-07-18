@@ -104,6 +104,7 @@ do
         echo "[HEXDUMP] CONTENT_LENGTH:$(echo "${CONTENT_LENGTH}" | hexdump)" >> "${LOGFILE}"
     fi
     if [ "${CURRENT_HTTP_REQ}" = "GET" ] && [ "${line}" = $'\r' ]; then
+        test -d "${DIR}" || mkdir -p "${DIR}"
         killall -9 tangd ; /usr/libexec/tangd -l -p "${TANGD_PORT}" "${DIR}" &
         {
             echo "-----------GET------------"
@@ -115,6 +116,7 @@ do
         TOTAL_LINES=""
     fi
     if [ "${CURRENT_HTTP_REQ}" = "POST" ] && [ "${line_length}" = "${CONTENT_LENGTH}" ]; then
+        test -d "${DIR}" || mkdir -p "${DIR}"
         killall -9 tangd ; /usr/libexec/tangd -l -p "${TANGD_PORT}" "${DIR}" &
         {
             echo "-----------POST--------------"
