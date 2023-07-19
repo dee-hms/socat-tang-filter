@@ -18,7 +18,7 @@ DIR=/var/db/tang
 TOTAL_LINES=
 TANGD_PORT=81
 DEFAULT_LOGFILE="/tmp/$(basename "$0" | sed s/\.sh//g)"
-CURRENT_HTTP_REQ="GET"
+CURRENT_HTTP_REQ=
 DEFAULT_CONFFILE="/etc/socat-tang-filter.csv"
 
 function usage() {
@@ -69,14 +69,21 @@ while read -r line;
 do
     echo "[${#line}] line:$(echo "${line}" | tr -d '\n' | tr -d '\r')" >> "${LOGFILE}"
     line_length=$((${#line}+1)) # It considers new line
-    if echo "${line}" | grep "POST /" > /dev/null;
+    if echo "${line}" | grep "GET /" > /dev/null;
+    then
+        CURRENT_HTTP_REQ="GET"
+        CURRENT_LINE="GET"
+    elif echo "${line}" | grep "POST /" > /dev/null;
     then
         CURRENT_HTTP_REQ="POST"
+        CURRENT_LINE="POST"
+    else
+        CURRENT_LINE=""
     fi
 
-    if [ "${CURRENT_HTTP_REQ}" = "GET" ]; then
+    if [ "${CURRENT_LINE}" = "GET" ]; then
         workspace=$(echo "${line}" | awk -F "GET " '{print $2}' | awk -F "/adv" '{print $1}' | tr -d '/')
-    elif [ "${CURRENT_HTTP_REQ}" = "POST" ]; then
+    elif [ "${CURRENT_LINE}" = "POST" ]; then
         workspace=$(echo "${line}" | awk -F "POST " '{print $2}' | awk -F "/rec" '{print $1}' | tr -d '/')
     fi
 
@@ -88,10 +95,19 @@ do
             line=${line/"/${workspace}"/}
             {
                 echo "workspace_dir:${workspace_dir} from configuration file:[$CONFFILE]"
-                echo "parsed DIR=${DIR} for workspace:${workspace} from configuration file:[$CONFFILE]"
+                echo "parsed DIR=${DIR} for workspace:${workspace}"
                 echo "forward line=${line}"
             } >> "${LOGFILE}"
         fi
+    else
+        workspace_dir=$(head -1 "${CONFFILE}")
+        DIR=$(echo "${workspace_dir}" | awk -F ',' '{print $2}' | tr -d '"')
+        {
+            echo "No workspace in URL"
+            echo "workspace_dir:${workspace_dir} from 1st line of configuration file:[$CONFFILE]"
+            echo "parsed DIR=${DIR} for workspace:${workspace}"
+            echo "forward line=${line}"
+        } >> "${LOGFILE}"
     fi
 
     if echo "${line}" | grep -E "Content-Length:" > /dev/null; then
