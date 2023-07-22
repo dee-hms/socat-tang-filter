@@ -1,4 +1,11 @@
 # socat-tang-filter
+
+## License
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## Description
+
 A simple script that parses request and starts Tang Server to the appropriate database.
 
 Execute it through `socat` tool, so that requests are parsed appropriately:
