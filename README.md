@@ -4,6 +4,11 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## Status
+
+[![Spellcheck](https://github.com/dee-hms/socat-tang-filter/actions/workflows/spellcheck.yaml/badge.svg)](https://github.com/dee-hms/socat-tang-filter/actions/workflows/spellcheck.yaml)\
+[![Shellcheck](https://github.com/dee-hms/socat-tang-filter/actions/workflows/shellcheck.yaml/badge.svg)](https://github.com/dee-hms/socat-tang-filter/actions/workflows/shellcheck.yaml)
+
 ## Description
 
 A simple script that parses request and starts Tang Server to the appropriate database.
