@@ -13,8 +13,8 @@ jobs:
       pull-requests: write
     steps:
       - name: 'Auto-assign issue'
-        uses: pozil/auto-assign-issue@latest
+        uses: pozil/auto-assign-issue@v2
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token: ${{ secrets.HMS_SECRET }}
           assignees: sarroutbi
           numOfAssignee: 1
